@@ -1,0 +1,100 @@
+version: "3.7"
+services:
+  app:
+    container_name: app
+    build:
+        args:
+            user: app
+            uid: 1000
+        context: ./
+        dockerfile: Dockerfile
+    restart: unless-stopped
+    command: "php artisan octane:start --watch --max-requests=5000 --task-workers=1 --host=0.0.0.0 --port=8000"
+    working_dir: /var/www/
+    environment:
+        PHP_OPCACHE_ENABLE: ${PHP_OPCACHE_ENABLE}
+        PHP_OPCACHE_VALIDATE_TIMESTAMPS: ${PHP_OPCACHE_VALIDATE_TIMESTAMPS}
+        PHP_OPCACHE_REVALIDATE_FREQ: ${PHP_OPCACHE_REVALIDATE_FREQ}
+    volumes:
+        - ./:/var/www
+    depends_on:
+        - database
+        - redis
+    networks:
+        - app-networks
+  # nginx
+  nginx:
+    container_name: app-nginx
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+        - "80:80"
+        - "443:443"
+    volumes:
+        - ./:/var/www
+        - ./docker/nginx/ssl/local/:/etc/ssl/
+        - ./docker/nginx/conf.d/:/etc/nginx/conf.d/
+        - ./docker/nginx/conf/nginx.conf/:/etc/nginx/nginx.conf
+    depends_on:
+        - app
+    networks:
+        - app-networks
+  # database
+  database:
+    container_name: app-database
+    image: postgres:14-alpine
+    restart: unless-stopped
+    environment:
+        POSTGRES_DATABASE: ${DB_DATABASE}
+        POSTGRES_PASSWORD: ${DB_PASSWORD}
+        POSTGRES_USER: ${DB_USERNAME}
+    ports:
+        - "5432:5432"
+    volumes:
+        - ./.docker/postgresql/data:/var/lib/postgresql/data
+    networks:
+        - app-networks
+  #supervisor
+  supervisor:
+    container_name: app-supervisor
+    build:
+        args:
+            user: app
+            uid: 1000
+        context: ./
+        dockerfile: Dockerfile
+    restart: unless-stopped
+    entrypoint: start-supervisor
+    volumes:
+        - ./:/var/www
+    depends_on:
+        - app
+    networks:
+        - app-networks        
+  #composer
+  composer:
+    container_name: app-composer
+    build:
+        args:
+            user: app
+            uid: 1000
+        context: ./
+        dockerfile: Dockerfile
+    restart: unless-stopped
+    volumes:
+        - ./:/var/www
+    depends_on:
+        - app
+    networks:
+        - app-networks        
+  #redis
+  redis:
+    container_name: app-redis
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    networks:
+      - app-networks
+networks:
+    app-networks:
+        driver: bridge
