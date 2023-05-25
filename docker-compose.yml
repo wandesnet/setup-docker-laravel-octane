@@ -24,7 +24,7 @@ services:
         - app-networks
   # nginx
   nginx:
-    container_name: app-nginx
+    container_name: nginx
     image: nginx:alpine
     restart: unless-stopped
     ports:
@@ -40,8 +40,8 @@ services:
     networks:
         - app-networks
   # database
-  database:
-    container_name: app-database
+  postgres:
+    container_name: postgres
     image: postgres:14-alpine
     restart: unless-stopped
     environment:
@@ -56,7 +56,7 @@ services:
         - app-networks
   #supervisor
   supervisor:
-    container_name: app-supervisor
+    container_name: supervisor
     build:
         args:
             user: app
@@ -73,7 +73,7 @@ services:
         - app-networks        
   #composer
   composer:
-    container_name: app-composer
+    container_name: composer
     build:
         args:
             user: app
@@ -89,7 +89,7 @@ services:
         - app-networks        
   #redis
   redis:
-    container_name: app-redis
+    container_name: redis
     image: redis:latest
     ports:
       - "6379:6379"
